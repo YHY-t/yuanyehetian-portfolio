@@ -185,6 +185,7 @@ img { display: block; max-width: 100%; }
 @media (max-width: 600px), (hover: none) and (pointer: coarse) {
   .scroll-cue-desktop { display: none; }
   .scroll-cue-mobile { display: inline; }
+  .scroll-arrows { transform: rotate(180deg); }
 }
 .scroll-arrows { display: block; position: relative; width: 30px; height: 44px; }
 .scroll-arrows i { position: absolute; left: 7px; top: 0; width: 16px; height: 16px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); animation: scroll-chevron 1.8s ease-in-out infinite; }

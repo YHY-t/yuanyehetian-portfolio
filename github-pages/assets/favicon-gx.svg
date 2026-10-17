@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 48 48" role="img" aria-labelledby="title desc">
+  <title id="title">原野和天 · GX 连写标志</title>
+  <desc id="desc">天际蓝配色：浅蓝色的 G 与薄荷绿色的 X 相连，置于钴蓝色圆角底上，象征原野与天空交汇。</desc>
+  <rect width="48" height="48" rx="13" fill="#3A59D1"/>
+  <path d="M22.5 13A11.5 11.5 0 1 0 27 24H18.5" fill="none" stroke="#D3ECFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m30 15 12 18m0-18L30 33" fill="none" stroke="#B5FCCD" stroke-width="3.4" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://yhy-t.github.io/yuanyehetian-portfolio/sitemap.xml

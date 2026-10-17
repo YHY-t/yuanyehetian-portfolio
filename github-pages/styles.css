@@ -181,6 +181,11 @@ img { display: block; max-width: 100%; }
 .tunnel-bottom { position: absolute; z-index: 5; bottom: max(32px, env(safe-area-inset-bottom)); left: 0; right: 0; padding-inline: var(--gutter); text-align: center; pointer-events: none; }
 .tunnel-scroll-hint, .scroll-link { display: inline-flex; flex-direction: column; align-items: center; gap: 10px; color: #d3ecff; }
 .scroll-cue-label { font-size: 12px; letter-spacing: .16em; }
+.scroll-cue-mobile { display: none; }
+@media (max-width: 600px), (hover: none) and (pointer: coarse) {
+  .scroll-cue-desktop { display: none; }
+  .scroll-cue-mobile { display: inline; }
+}
 .scroll-arrows { display: block; position: relative; width: 30px; height: 44px; }
 .scroll-arrows i { position: absolute; left: 7px; top: 0; width: 16px; height: 16px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); animation: scroll-chevron 1.8s ease-in-out infinite; }
 .scroll-arrows i:nth-child(2) { top: 9px; animation-delay: .18s; }

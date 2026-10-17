@@ -50,6 +50,89 @@
   let decoded = false;
   let renderer = null;
 
+  // Stop the gesture that finishes the tunnel at the real homepage. A timeout
+  // alone cannot distinguish the tail of touch/trackpad inertia from new input.
+  const homeStop = { holding: false,
+    passed: Boolean(window.location?.hash && window.location.hash !== '#home'), previousY: scrollY,
+    until: 0, lastWheelAt: -Infinity, touch: null };
+  const homeBoundary = () => geometry.start + geometry.distance;
+  const stopEnabled = () => !motion.matches && root.classList.contains('tunnel-ready');
+  function releaseHome() { homeStop.holding = false; homeStop.passed = true; }
+  function alignHome() {
+    homeStop.previousY = homeBoundary();
+    if (Math.abs(scrollY - homeBoundary()) > .5) scrollTo({ top: homeBoundary(), behavior: 'instant' });
+  }
+  function stopAtHome() {
+    homeStop.holding = true;
+    homeStop.until = performance.now() + 700;
+    alignHome();
+    syncScroll(true);
+  }
+  function stopScrollOverflow() {
+    if (!stopEnabled()) { homeStop.holding = false; homeStop.previousY = scrollY; return; }
+    const y = scrollY, boundary = homeBoundary();
+    if (homeStop.holding) { alignHome(); return; }
+    if (!homeStop.passed && homeStop.previousY < boundary && y >= boundary) {
+      stopAtHome(); return;
+    }
+    if (y < boundary - 2) homeStop.passed = false;
+    homeStop.previousY = y;
+  }
+  function editableOrDialog(event) {
+    return event.target?.closest?.('input, textarea, select, [contenteditable="true"], dialog[open]');
+  }
+  addEventListener('wheel', event => {
+    if (!stopEnabled() || event.ctrlKey || editableOrDialog(event) || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    const now = performance.now(), gap = now - homeStop.lastWheelAt;
+    homeStop.lastWheelAt = now;
+    const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? geometry.height : 1);
+    if (homeStop.holding) {
+      if (now >= homeStop.until && gap >= 250 && Math.abs(delta) > 0) releaseHome();
+      else { event.preventDefault(); alignHome(); }
+    } else if (!homeStop.passed && delta > 0 && scrollY < homeBoundary() && scrollY + delta >= homeBoundary()) {
+      event.preventDefault(); stopAtHome();
+    }
+  }, { passive: false });
+  addEventListener('touchstart', event => {
+    if (event.touches.length !== 1) { homeStop.touch = null; return; }
+    const point = event.touches[0];
+    homeStop.touch = { x: point.clientX, y: point.clientY, originY: point.clientY,
+      fresh: homeStop.holding && performance.now() >= homeStop.until };
+  }, { passive: true });
+  addEventListener('touchmove', event => {
+    const touch = homeStop.touch;
+    if (!stopEnabled() || !touch || event.touches.length !== 1 || editableOrDialog(event)) return;
+    const point = event.touches[0], delta = touch.y - point.clientY;
+    if (Math.abs(point.clientX - touch.x) > Math.abs(delta)) return;
+    if (homeStop.holding) {
+      if (touch.fresh && Math.abs(touch.originY - point.clientY) > 8) releaseHome();
+      else { event.preventDefault(); alignHome(); }
+    } else if (!homeStop.passed && delta > 0 && scrollY < homeBoundary() && scrollY + delta >= homeBoundary()) {
+      event.preventDefault(); stopAtHome();
+    }
+    touch.x = point.clientX; touch.y = point.clientY;
+  }, { passive: false });
+  for (const type of ['touchend', 'touchcancel']) addEventListener(type, () => { homeStop.touch = null; }, { passive: true });
+  addEventListener('keydown', event => {
+    if (!stopEnabled() || event.ctrlKey || event.altKey || event.metaKey || editableOrDialog(event)) return;
+    const steps = { ArrowDown: 40, PageDown: geometry.height, ' ': geometry.height,
+      ArrowUp: -40, PageUp: -geometry.height, End: Infinity, Home: -Infinity };
+    let delta = steps[event.key];
+    if (delta === undefined || (event.target?.closest?.('button, a, summary') && event.key === ' ')) return;
+    if (event.key === ' ' && event.shiftKey) delta = -delta;
+    if (homeStop.holding) {
+      if (!event.repeat && performance.now() >= homeStop.until) releaseHome();
+      else { event.preventDefault(); alignHome(); }
+    } else if (!homeStop.passed && delta > 0 && scrollY < homeBoundary() && scrollY + delta >= homeBoundary()) {
+      event.preventDefault(); stopAtHome();
+    }
+  });
+  document.addEventListener('click', event => {
+    const href = event.target?.closest?.('a[href]')?.getAttribute('href');
+    // Explicit navigation is intentional; it must not be treated as inertia.
+    if (href?.startsWith('#') && href !== '#home' && href !== '#') releaseHome();
+  }, { capture: true });
+
   function activateRenderer(forceCanvas = false) {
     if ((!forceCanvas && motion.matches) || !decoded || (renderer && !forceCanvas)) return;
     const next = window.TunnelRenderer.create(sources, {
@@ -155,6 +238,8 @@
       const progress = window.TunnelProjection.remapProgress(preserve.progress, preserve.end, geometry.journeyEnd);
       scrollTo({ top: geometry.start + progress * geometry.distance, behavior: 'instant' });
     }
+    if (homeStop.holding && stopEnabled()) alignHome();
+    else homeStop.previousY = scrollY;
     progressbar.hidden = motion.matches;
     lastProgress = -1;
     if (motion.matches) {
@@ -176,7 +261,7 @@
       event.preventDefault();
       if (location.hash !== '#home') history.pushState(null, '', '#home');
       if (motion.matches) hero.scrollIntoView({ behavior: 'instant', block: 'start' });
-      else scrollTo({ top: geometry.start + geometry.distance, behavior: 'instant' });
+      else { homeStop.passed = false; stopAtHome(); }
       syncScroll(true);
       const heading = document.querySelector('#hero-heading');
       heading.tabIndex = -1;
@@ -185,6 +270,7 @@
   });
   document.documentElement.classList.add('tunnel-ready');
   addEventListener('scroll', () => {
+    stopScrollOverflow();
     if (!frame && !resizeFrame) frame = requestAnimationFrame(() => syncScroll());
   }, { passive: true });
   addEventListener('resize', () => {
